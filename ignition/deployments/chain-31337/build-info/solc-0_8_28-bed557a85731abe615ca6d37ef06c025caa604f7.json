@@ -1,0 +1,40 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-bed557a85731abe615ca6d37ef06c025caa604f7",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/Escrow.sol": "project/contracts/Escrow.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Escrow.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract Escrow {\n    struct Payment {\n        address buyer;\n        address seller;\n        uint256 amount;\n        bool released;\n        uint256 createdAt;\n    }\n\n    uint256 public paymentCount;\n    mapping(uint256 => Payment) public payments;\n\n    event PaymentCreated(\n        uint256 indexed id,\n        address indexed buyer,\n        address indexed seller,\n        uint256 amount,\n        uint256 timestamp\n    );\n\n    event PaymentReleased(\n        uint256 indexed id,\n        address indexed seller,\n        uint256 amount,\n        uint256 timestamp\n    );\n\n    event InstantPaymentReleased(\n        address indexed buyer,\n        address indexed seller,\n        uint256 amount,\n        uint256 timestamp\n    );\n\n    function pay(address seller, bool isEscrow) external payable {\n        require(msg.value > 0, \"Valor deve ser maior que zero\");\n        require(seller != address(0), \"Seller invalido\");\n\n        if (isEscrow) {\n            payments[paymentCount] = Payment({\n                buyer: msg.sender,\n                seller: seller,\n                amount: msg.value,\n                released: false,\n                createdAt: block.timestamp\n            });\n\n            emit PaymentCreated(\n                paymentCount,\n                msg.sender,\n                seller,\n                msg.value,\n                block.timestamp\n            );\n\n            paymentCount++;\n        } else {\n            // FLUXO E-COMMERCE (DIRETO)\n            payable(seller).transfer(msg.value);\n\n            emit InstantPaymentReleased(\n                msg.sender,\n                seller,\n                msg.value,\n                block.timestamp\n            );\n        }\n    }\n\n    function release(uint256 id) external {\n        Payment storage p = payments[id];\n        require(msg.sender == p.buyer, \"Apenas o comprador pode liberar\");\n        require(!p.released, \"Ja foi liberado\");\n        require(p.amount > 0, \"Pagamento nao existe\");\n\n        p.released = true;\n        payable(p.seller).transfer(p.amount);\n\n        emit PaymentReleased(\n            id,\n            p.seller,\n            p.amount,\n            block.timestamp\n        );\n    }\n}"
+      }
+    }
+  }
+}
