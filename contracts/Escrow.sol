@@ -60,16 +60,17 @@ contract Escrow {
         feeBasisPoints = _newFee;
     }
 
-    function pay(address seller, bool isEscrow) external payable {
+    function pay(address seller, address buyer, bool isEscrow) external payable {
         require(msg.value > 0, "Valor deve ser maior que zero");
         require(seller != address(0), "Seller invalido");
+        require(buyer != address(0), "Buyer invalido");
 
         uint256 fee = (msg.value * feeBasisPoints) / BASIS_POINTS;
         uint256 netAmount = msg.value - fee;
 
         if (isEscrow) {
             payments[paymentCount] = Payment({
-                buyer: msg.sender,
+                buyer: buyer,
                 seller: seller,
                 netAmount: netAmount,
                 released: false,
@@ -81,7 +82,7 @@ contract Escrow {
 
             emit PaymentCreated(
                 paymentCount,
-                msg.sender,
+                buyer,
                 seller,
                 netAmount,
                 fee,
@@ -89,13 +90,12 @@ contract Escrow {
             );
 
             emit PaymentDeposited(
-                msg.sender,
+                buyer,
                 seller,
                 netAmount,
                 paymentCount,
                 block.timestamp
             );
-
 
             paymentCount++;
         } else {
@@ -104,7 +104,7 @@ contract Escrow {
             if (fee > 0) payable(platformAdmin).transfer(fee);
 
             emit InstantPaymentReleased(
-                msg.sender,
+                buyer,
                 seller,
                 netAmount,
                 fee,

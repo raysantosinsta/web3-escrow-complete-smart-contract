@@ -5,7 +5,8 @@ export default buildModule("EscrowModule", (m) => {
 
 
   const seller = m.getAccount(1);
-  m.call(escrow, "pay", [seller, true], { value: 1_000_000_000_000_000_000n });
+  const buyer = m.getAccount(0);
+  m.call(escrow, "pay", [seller, buyer, true], { value: 1_000_000_000_000_000_000n });
 
   return { escrow };
 });
