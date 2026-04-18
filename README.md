@@ -1,71 +1,227 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# PayWeb3 Protocol — MVP Descentralizado
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+> Protocolo descentralizado completo: Escrow seguro + Token ERC-20 + NFT ERC-721 + Staking com Chainlink + DAO de Governança
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+---
 
-## Project Overview
+## 🏗️ Arquitetura do Protocolo
 
-This example project includes:
-
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
-
-## Usage
-
-### Running Tests
-
-To run all the tests in the project, execute the following command:
-
-```shell
-npx hardhat test
+```
+┌─────────────────────────────────────────────────────┐
+│                  PROTOCOLO PAYWEB3                  │
+├───────────────┬───────────────┬─────────────────────┤
+│  EscrowToken  │  EscrowNFT    │    Escrow.sol        │
+│  (ERC-20)     │  (ERC-721)    │  Custódia segura     │
+│  Token ESC    │  Badge NFT    │  Máquina de estados  │
+└──────┬────────┴───────┬───────┴──────────┬──────────┘
+       │                │                  │
+       ▼                ▼                  ▼
+┌─────────────┐  ┌─────────────┐  ┌──────────────────┐
+│  Staking    │  │ Governance  │  │  Chainlink        │
+│  Contract   │  │  DAO        │  │  ETH/USD Price   │
+│  APY dinâm. │  │  Votação    │  │  Feed (Sepolia)   │
+└─────────────┘  └─────────────┘  └──────────────────┘
 ```
 
-You can also selectively run the Solidity or `node:test` tests:
+---
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
+## 📋 Contratos
+
+| Contrato | Padrão | Descrição |
+|---|---|---|
+| `EscrowToken.sol` | ERC-20 | Token ESC — recompensas e governança |
+| `EscrowNFT.sol` | ERC-721 | Badge on-chain para freelancers (SVG base64) |
+| `EscrowStaking.sol` | Custom | Staking com APY dinâmico via Chainlink ETH/USD |
+| `EscrowGovernance.sol` | DAO | Governança com votação ponderada por ESC |
+| `Escrow.sol` | Custom | Custódia segura com máquina de estados |
+
+---
+
+## 🔗 Endereços de Deploy — Sepolia Testnet
+
+> Preencher após executar o deploy
+
+| Contrato | Endereço | Explorer |
+|---|---|---|
+| EscrowToken (ESC) | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+| EscrowNFT (ESCBDG) | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+| EscrowStaking | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+| EscrowGovernance | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+| Escrow | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+
+**Chainlink ETH/USD Feed (Sepolia):** `0x694AA1769357215DE4FAC081bf1f309aDC325306`
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+
+- Node.js >= 18
+- npm >= 9
+- MetaMask com ETH na Sepolia ([Faucet](https://sepoliafaucet.com))
+
+### 1. Instalar dependências
+
+```bash
+# Contratos
+cd contracts && npm install
+
+# Frontend
+cd ../frontend && npm install
+
+# Backend
+cd ../backend && npm install
 ```
 
-### Make a deployment to Sepolia
+### 2. Configurar variáveis de ambiente
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+```bash
+# Contratos — criar arquivo .env
+# contracts/.env
+SEPOLIA_RPC_URL=https://rpc.sepolia.org
+SEPOLIA_PRIVATE_KEY=0xSUA_CHAVE_PRIVADA
 
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+# Frontend
+cp frontend/.env.example frontend/.env.local
+# Preencher endereços após o deploy
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+### 3. Compilar contratos
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+```bash
+cd contracts
+npx hardhat compile
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+### 4. Deploy em Sepolia
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+```bash
+cd contracts
+npx hardhat run scripts/deploy-all.ts --network sepolia
 ```
 
-<!-- highlander -->
+Os endereços serão salvos em `contracts/deployed-addresses.json`. Copie-os para o `frontend/.env.local`.
 
-rodar contrato localmente
+### 5. Executar script de demonstração
 
-npx hardhat node
+```bash
+cd contracts
+npx hardhat run scripts/demo-interactions.ts --network sepolia
+```
 
-pegar endereços do contrato
+### 6. Iniciar o frontend
 
-<!-- 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 -->
-<!-- 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d -->
-<!-- 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a -->
+```bash
+cd frontend
+npm run dev
+# Acesse http://localhost:3000
+```
 
-npx hardhat ignition deploy ./ignition/modules/Escrow.ts --network localhost
+---
+
+## 🎮 Funcionalidades do Frontend
+
+### Staking (`/staking`)
+- Stake/Unstake de tokens ESC
+- APY dinâmico baseado no preço ETH (Chainlink)
+- Claim de recompensas em ESC
+- Visualização do preço ETH em tempo real
+
+### Governança (`/governance`)  
+- Criação de propostas (mínimo 100 ESC)
+- Votação ponderada por saldo de ESC
+- Progresso de quórum em tempo real
+- Lifecycle completo: Ativa → Aprovada/Rejeitada → Executada
+
+---
+
+## 🔐 Segurança
+
+- ✅ `ReentrancyGuard` em todas as funções de transferência
+- ✅ Padrão Checks-Effects-Interactions
+- ✅ `Ownable` para controle de acesso
+- ✅ Solidity ^0.8.x (overflow/underflow protegido nativamente)
+- ✅ OpenZeppelin v5 (auditada e battle-tested)
+- ✅ Integração Chainlink com fallback seguro
+
+Ver relatório completo em [`AUDIT_REPORT.md`](./AUDIT_REPORT.md).
+
+---
+
+## 🔮 Integração Chainlink (Etapa 4)
+
+- **Feed:** ETH/USD na Sepolia (`0x694AA1769357215DE4FAC081bf1f309aDC325306`)
+- **Uso:** `EscrowStaking.sol` consulta o preço do ETH a cada interação de staking
+- **Fórmula do APY:**
+  ```
+  APY_ajustado = 10% × (preço_ETH / $2.000)
+  Cap máximo: 50% ao ano
+  ```
+- **Fallback:** Se o oráculo falhar ou ficar desatualizado (>1h), usa $2.000 como referência
+
+---
+
+## 📊 Diagrama de Fluxo de Staking
+
+```
+Usuário  →  approve(stakingAddr, amount)   →  EscrowToken
+         →  stake(amount)                  →  EscrowStaking
+                                              ├── Consulta ETH/USD (Chainlink)
+                                              ├── Calcula APY dinâmico
+                                              └── Acumula recompensas
+         →  claimRewards()                 →  EscrowStaking
+                                              └── mint(user, rewards)  →  EscrowToken
+```
+
+## 📊 Diagrama de Fluxo de Governança
+
+```
+Holder (≥100 ESC)  →  propose(title, desc)  →  EscrowGovernance
+                                                └── Período: 3 dias
+Qualquer holder    →  vote(id, true/false)   →  EscrowGovernance (ponderado por ESC)
+Qualquer pessoa    →  finalizeProposal(id)   →  EscrowGovernance (após prazo)
+Admin              →  executeProposal(id)    →  Contrato alvo (se aprovada)
+```
+
+---
+
+## 📦 Estrutura do Projeto
+
+```
+web3-escrow-complete/
+├── contracts/
+│   ├── contracts/
+│   │   ├── Escrow.sol           # Custódia (existente)
+│   │   ├── EscrowToken.sol      # ERC-20 ESC
+│   │   ├── EscrowNFT.sol        # ERC-721 Badge
+│   │   ├── EscrowStaking.sol    # Staking + Chainlink
+│   │   └── EscrowGovernance.sol # DAO
+│   ├── scripts/
+│   │   ├── deploy-all.ts        # Deploy de todos os contratos
+│   │   └── demo-interactions.ts # Demo: NFT mint, stake, vote
+│   ├── AUDIT_REPORT.md          # Relatório de auditoria
+│   └── deployed-addresses.json  # Endereços após deploy
+├── frontend/
+│   ├── app/
+│   │   ├── staking/page.tsx     # UI de Staking
+│   │   └── governance/page.tsx  # UI de Governança DAO
+│   └── abi/
+│       ├── EscrowToken.json
+│       ├── EscrowNFT.json
+│       ├── EscrowStaking.json
+│       └── EscrowGovernance.json
+└── backend/
+    └── ...
+```
+
+---
+
+## 🧪 Etapas de Entrega (Checklist)
+
+- [x] **Etapa 1** — Modelagem: arquitetura definida, padrões ERC justificados
+- [x] **Etapa 2** — Implementação: ERC-20, ERC-721, Staking, Governança
+- [x] **Etapa 3** — Segurança: ReentrancyGuard, Ownable, Solidity ^0.8, auditoria manual
+- [x] **Etapa 4** — Oráculo: Chainlink ETH/USD integrado no Staking
+- [x] **Etapa 5** — Integração Web3: frontend ethers/wagmi + script de demo
+- [ ] **Etapa 6** — Deploy Sepolia: aguardando execução do `deploy-all.ts`
