@@ -1,14 +1,15 @@
-import hre from "hardhat";
-import { parseEther, formatEther } from "viem";
+import { createWalletClient, createPublicClient, http, parseEther, formatEther, getContract } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { sepolia, hardhat } from "viem/chains";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import hre from "hardhat";
 
-/**
- * Script de demonstração — Etapa 5 do enunciado
- * Demonstra: Mint de NFT, Stake de tokens, Votação na DAO
- */
 async function main() {
+  const networkArgIndex = process.argv.indexOf("--network");
+  const networkName = networkArgIndex !== -1 ? process.argv[networkArgIndex + 1] : "localhost";
+
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const addressesPath = join(__dirname, "..", "deployed-addresses.json");
 
@@ -22,91 +23,83 @@ async function main() {
 
   const { EscrowToken, EscrowNFT, EscrowStaking, EscrowGovernance } = addresses.contracts;
 
-  console.log("\n🎮 DEMO DE INTERAÇÕES — PayWeb3 Protocol");
+  console.log(`\n🎮 DEMO DE INTERAÇÕES — Rede: ${networkName}`);
   console.log("═══════════════════════════════════════════════════\n");
 
-  const [owner, alice, bob] = await hre.viem.getWalletClients();
-  console.log(`👤 Owner:  ${owner.account.address}`);
-  console.log(`👤 Alice:  ${alice.account.address}`);
-  console.log(`👤 Bob:    ${bob.account.address}\n`);
+  const PRIVATE_KEY = (process.env.PRIVATE_KEY || "0xc9db5c9ee35683e48d4ed3f4e2158120271398e09545f891147a259e1804702d") as `0x${string}`;
+  const account = privateKeyToAccount(PRIVATE_KEY);
+  const chain = networkName === "sepolia" ? sepolia : hardhat;
+  const transport = http(networkName === "sepolia" ? process.env.SEPOLIA_RPC_URL : "http://127.0.0.1:8545");
+
+  const walletClient = createWalletClient({ account, chain, transport });
+  const publicClient = createPublicClient({ chain, transport });
+
+  console.log(`👤 Executor: ${account.address}\n`);
+
+  // Artifacts (ABIs)
+  const getAbi = (name: string) => {
+    const path = join(process.cwd(), "artifacts", "contracts", `${name}.sol`, `${name}.json`);
+    return JSON.parse(readFileSync(path, "utf8")).abi;
+  };
 
   // ─── Contratos ────────────────────────────────────────────────────────
-  const token      = await hre.viem.getContractAt("EscrowToken",    EscrowToken as `0x${string}`);
-  const nft        = await hre.viem.getContractAt("EscrowNFT",      EscrowNFT as `0x${string}`);
-  const staking    = await hre.viem.getContractAt("EscrowStaking",  EscrowStaking as `0x${string}`);
-  const governance = await hre.viem.getContractAt("EscrowGovernance", EscrowGovernance as `0x${string}`);
+  const token = getContract({ address: EscrowToken as `0x${string}`, abi: getAbi("EscrowToken"), client: { wallet: walletClient, public: publicClient } });
+  const nft = getContract({ address: EscrowNFT as `0x${string}`, abi: getAbi("EscrowNFT"), client: { wallet: walletClient, public: publicClient } });
+  const staking = getContract({ address: EscrowStaking as `0x${string}`, abi: getAbi("EscrowStaking"), client: { wallet: walletClient, public: publicClient } });
+  const governance = getContract({ address: EscrowGovernance as `0x${string}`, abi: getAbi("EscrowGovernance"), client: { wallet: walletClient, public: publicClient } });
 
   // ─── 1. MINT DE NFT ───────────────────────────────────────────────────
-  console.log("━━━ [1] MINT DE NFT (EscrowBadge) ━━━━━━━━━━━━━━━━");
-  console.log("  Mintando badge BRONZE para Alice (5 escrows completados)...");
-  const mintTx = await nft.write.mintBadge([
-    alice.account.address,
-    "Alice Freelancer",
-    5n,
-  ]);
-  console.log(`  ✅ Badge mintado! Tx: ${mintTx}`);
+  console.log(`  Mintando badge BRONZE para ${account.address} (5 escrows completados)...`);
 
-  const tokenId = await nft.read.freelancerBadge([alice.account.address]);
-  const uri = await nft.read.tokenURI([tokenId]);
+  const alreadyHasBadge = await nft.read.hasBadge([account.address]) as boolean;
+
+  if (!alreadyHasBadge) {
+    const mintTx = await nft.write.mintBadge([
+      account.address,
+      "Freelancer VIP",
+      5n,
+    ]);
+    console.log(`  ✅ Transação enviada! Aguardando confirmação...`);
+    await publicClient.waitForTransactionReceipt({ hash: mintTx });
+    console.log(`  ✅ Badge mintado com sucesso! Tx: ${mintTx}`);
+  } else {
+    console.log(`  ℹ️  Você já possui um badge! Pulando o mint...`);
+  }
+
+  const tokenId = await nft.read.freelancerBadge([account.address]) as any;
+  const uri = await nft.read.tokenURI([tokenId]) as string;
   console.log(`  📛 Badge TokenId: ${tokenId}`);
   console.log(`  🖼️  TokenURI (base64): ${uri.substring(0, 80)}...`);
 
   // ─── 2. STAKE DE TOKENS ───────────────────────────────────────────────
   console.log("\n━━━ [2] STAKE DE TOKENS (ESC) ━━━━━━━━━━━━━━━━━━━━");
-  
-  // Owner transfere tokens para Alice e Bob
-  const transferAmount = parseEther("500"); // 500 ESC
-  console.log("  Transferindo 500 ESC para Alice e Bob...");
-  
-  // Nota: owner do token é o Staking contract após deploy-all
-  // Para demo, usaremos os tokens iniciais do owner (1M ESC)
-  const ownerBalance = await token.read.balanceOf([owner.account.address]);
-  console.log(`  Saldo owner: ${formatEther(ownerBalance)} ESC`);
 
-  // Alice faz stake de 200 ESC
-  const stakeAmount = parseEther("200");
-  console.log(`\n  Alice aprovando ${formatEther(stakeAmount)} ESC para o Staking...`);
-  // (Em demo real com hardhat node, Alice precisaria ter tokens)
-  console.log("  ℹ️  [DEMO] Em ambiente real: alice.approve(stakingAddr, amount) → alice.stake(amount)");
-  console.log("  ℹ️  [DEMO] Chainlink ETH/USD APY será calculado dinamicamente");
+  const balance = await token.read.balanceOf([account.address]) as any;
+  console.log(`  Seu saldo: ${formatEther(balance)} ESC`);
 
-  // Consulta APY atual via oráculo
-  try {
-    const ethPrice = await staking.read.getEthPrice();
-    console.log(`\n  💹 Preço ETH (Chainlink): $${ethPrice.toString()}`);
-  } catch {
-    console.log("  ⚠️  Oráculo indisponível em rede local (fallback para $2000)");
-  }
+  const ethPrice = await staking.read.getEthPrice() as any;
+  console.log(`  💹 Preço ETH (Chainlink): $${ethPrice.toString()}`);
 
   // ─── 3. VOTAÇÃO NA DAO ────────────────────────────────────────────────
   console.log("\n━━━ [3] VOTAÇÃO NA DAO (EscrowGovernance) ━━━━━━━━━");
-  
-  // Para criar proposta, precisamos de tokens na conta do owner (que ainda tem 1M ESC)
-  console.log("  Criando proposta: 'Aumentar taxa do protocolo para 1.5%'...");
-  
-  // Nota: neste ponto o owner do token é o Staking, então o owner original não pode 
-  // criar proposta diretamente. Em um deploy real configurado corretamente, 
-  // a treasury retém tokens para governança.
-  console.log("  ℹ️  [DEMO] Em ambiente de produção:");
-  console.log("    1. governance.propose(title, description, target, calldata)");
-  console.log("    2. Aguardar 3 dias de votação");
-  console.log("    3. governance.vote(proposalId, true/false)");
-  console.log("    4. governance.finalizeProposal(proposalId)");
-  console.log("    5. governance.executeProposal(proposalId) [owner]");
 
-  // Mostra a contagem de proposals
-  const count = await governance.read.proposalCount();
-  console.log(`\n  📊 Total de proposals atualmente: ${count}`);
+  console.log("  ℹ️  [INFO] Em ambiente de produção, os tokens ESC permitem:");
+  console.log("    1. Criar propostas de governança");
+  console.log("    2. Votar em mudanças de taxas");
+
+  const count = await governance.read.proposalCount() as any;
+  console.log(`  📊 Total de propostas na DAO: ${count}`);
 
   // ─── Resumo final ─────────────────────────────────────────────────────
+  console.log("📋 Contratos utilizados:");
+  console.log(`  EscrowToken:      ${EscrowToken}`);
+  console.log(`  EscrowNFT:        ${EscrowNFT}`);
+  console.log(`  EscrowStaking:    ${EscrowStaking}`);
+  console.log(`  EscrowGovernance: ${EscrowGovernance}`);
+
   console.log("\n═══════════════════════════════════════════════════");
   console.log("  ✅ DEMO CONCLUÍDA COM SUCESSO!");
-  console.log("═══════════════════════════════════════════════════");
-  console.log("\n📋 Contratos utilizados:");
-  console.log(`  EscrowToken:     ${EscrowToken}`);
-  console.log(`  EscrowNFT:       ${EscrowNFT}`);
-  console.log(`  EscrowStaking:   ${EscrowStaking}`);
-  console.log(`  EscrowGovernance:${EscrowGovernance}`);
+  console.log("═══════════════════════════════════════════════════\n");
 }
 
 main().catch((err) => {
