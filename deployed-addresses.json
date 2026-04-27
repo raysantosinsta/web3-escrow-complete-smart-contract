@@ -1,10 +1,10 @@
 {
-  "network": "localhost",
+  "network": "sepolia",
   "contracts": {
-    "EscrowToken": "0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6",
-    "EscrowNFT": "0x8a791620dd6260079bf849dc5567adc3f2fdc318",
-    "EscrowStaking": "0x610178da211fef7d417bc0e6fed39f05609ad788",
-    "EscrowGovernance": "0xa51c1fc2f0d1a1b8494ed1fe312d7c3a78ed91c0",
-    "Escrow": "0x0dcd1bf9a1b36ce34237eeafef220932846bcd82"
+    "EscrowToken": "0x033b0125c97e55851fd255817b0c699352a7e8e7",
+    "EscrowNFT": "0xf74e27261295b962f5c46455e384b4d0a2faaaea",
+    "EscrowStaking": "0x549331912a2af5427355ca8ab6fa1b4c88fb40d6",
+    "EscrowGovernance": "0xaca38b6e786978be5cb4aeb0dafe30b32b501f54",
+    "Escrow": "0x823703308fffd493ff1f84c50b6a3a378a8a0067"
   }
 }

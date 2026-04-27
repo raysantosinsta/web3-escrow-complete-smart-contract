@@ -8,10 +8,11 @@ import hre from "hardhat";
 
 async function main() {
     // No Hardhat v3, pegamos o nome da rede pelos argumentos ou pelo provider
-    const networkName = (hre as any).hardhatArguments?.network || "localhost";
+    const networkArgIndex = process.argv.indexOf("--network");
+    const networkName = networkArgIndex !== -1 ? process.argv[networkArgIndex + 1] : "localhost";
     console.log(`\n🚀 Iniciando Deploy Blindado na rede: ${networkName}`);
 
-    const PRIVATE_KEY = (process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`;
+    const PRIVATE_KEY = (process.env.PRIVATE_KEY || "0xc9db5c9ee35683e48d4ed3f4e2158120271398e09545f891147a259e1804702d") as `0x${string}`;
     const chain = networkName === "sepolia" ? sepolia : hardhat;
     const transport = http(networkName === "sepolia" ? process.env.SEPOLIA_RPC_URL : "http://127.0.0.1:8545");
 
@@ -33,7 +34,7 @@ async function main() {
         console.log("\n[0/5] Deployando Oracle Fictício (Local)...");
         // Usamos um bytecode simples que retorna $2500
         const mockArtifact = {
-            abi: [{"inputs":[],"name":"latestRoundData","outputs":[{"internalType":"uint80","name":"roundId","type":"uint80"},{"internalType":"int256","name":"answer","type":"int256"},{"internalType":"uint256","name":"startedAt","type":"uint256"},{"internalType":"uint256","name":"updatedAt","type":"uint256"},{"internalType":"uint80","name":"answeredInRound","type":"uint80"}],"stateMutability":"view","type":"function"}],
+            abi: [{ "inputs": [], "name": "latestRoundData", "outputs": [{ "internalType": "uint80", "name": "roundId", "type": "uint80" }, { "internalType": "int256", "name": "answer", "type": "int256" }, { "internalType": "uint256", "name": "startedAt", "type": "uint256" }, { "internalType": "uint256", "name": "updatedAt", "type": "uint256" }, { "internalType": "uint80", "name": "answeredInRound", "type": "uint80" }], "stateMutability": "view", "type": "function" }],
             bytecode: "0x608060405234801561001057600080fd5b50610150806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063feaf968c14610030575b600080fd5b61003861004e565b6040516100459594939291906100a3565b60405180910390f35b600080806724576395b0000000809350505091565b6000819050919050565b6000819050919050565b61009d8161008a565b82525050565b600060a0820190506100b86000830188610094565b6100c56020830187610080565b6100d26040830186610080565b6100df6060830185610080565b6100ec6080830184610094565b5095949392919056fea264697066735822122049d53f0980f76901f46d1bf1e2e1d67f7813a3048e5898d9cc9b6742337f71f164736f6c634300081c0033"
         };
         const hashMock = await walletClient.deployContract({
