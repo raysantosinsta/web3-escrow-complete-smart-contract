@@ -1,227 +1,94 @@
-# PayWeb3 Protocol — MVP Descentralizado
+# 📜 PayWeb3 Smart Contracts — Infraestrutura On-chain
 
-> Protocolo descentralizado completo: Escrow seguro + Token ERC-20 + NFT ERC-721 + Staking com Chainlink + DAO de Governança
-
----
-
-## 🏗️ Arquitetura do Protocolo
-
-```
-┌─────────────────────────────────────────────────────┐
-│                  PROTOCOLO PAYWEB3                  │
-├───────────────┬───────────────┬─────────────────────┤
-│  EscrowToken  │  EscrowNFT    │    Escrow.sol        │
-│  (ERC-20)     │  (ERC-721)    │  Custódia segura     │
-│  Token ESC    │  Badge NFT    │  Máquina de estados  │
-└──────┬────────┴───────┬───────┴──────────┬──────────┘
-       │                │                  │
-       ▼                ▼                  ▼
-┌─────────────┐  ┌─────────────┐  ┌──────────────────┐
-│  Staking    │  │ Governance  │  │  Chainlink        │
-│  Contract   │  │  DAO        │  │  ETH/USD Price   │
-│  APY dinâm. │  │  Votação    │  │  Feed (Sepolia)   │
-└─────────────┘  └─────────────┘  └──────────────────┘
-```
+> **Suíte de contratos inteligentes para liquidação financeira, staking algorítmico e governança descentralizada na rede Ethereum Sepolia.**
 
 ---
 
-## 📋 Contratos
+## 📖 Visão Geral
 
-| Contrato | Padrão | Descrição |
-|---|---|---|
-| `EscrowToken.sol` | ERC-20 | Token ESC — recompensas e governança |
-| `EscrowNFT.sol` | ERC-721 | Badge on-chain para freelancers (SVG base64) |
-| `EscrowStaking.sol` | Custom | Staking com APY dinâmico via Chainlink ETH/USD |
-| `EscrowGovernance.sol` | DAO | Governança com votação ponderada por ESC |
-| `Escrow.sol` | Custom | Custódia segura com máquina de estados |
+Os contratos do **PayWeb3** formam o esqueleto de um protocolo de confiança programável. A arquitetura foi desenhada para ser modular, separando as preocupações de pagamento (Escrow), incentivos (Staking), reputação (NFT) e decisões (DAO), utilizando padrões da indústria como **OpenZeppelin** e **Chainlink**.
 
 ---
 
-## 🔗 Endereços de Deploy — Sepolia Testnet
+## ⚠️ O Problema
 
-> Preencher após executar o deploy
+1. **Risco de Contraparte:** Em negociações P2P, o risco de uma das partes não cumprir o acordo é alto sem um intermediário confiável.
+2. **Recompensas Estáticas:** Sistemas de staking com rendimento fixo ignoram a volatilidade do mercado, tornando-se insustentáveis ou pouco atraentes.
+3. **Falta de Histórico Verificável:** No mundo freelance, é difícil provar competência de forma imutável e descentralizada.
 
-| Contrato | Endereço | Explorer |
-|---|---|---|
-| EscrowToken (ESC) | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
-| EscrowNFT (ESCBDG) | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
-| EscrowStaking | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
-| EscrowGovernance | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
-| Escrow | `0x...` | [Etherscan](https://sepolia.etherscan.io/address/0x...) |
+## ✅ A Solução (Core Logic)
 
-**Chainlink ETH/USD Feed (Sepolia):** `0x694AA1769357215DE4FAC081bf1f309aDC325306`
+1. **Smart Escrow (Escrow.sol):** Atua como um "terceiro fiel" digital que retém fundos em garantia e só os libera mediante prova de execução ou consenso via assinaturas criptográficas.
+2. **Oracle-Based Staking (EscrowStaking.sol):** Utiliza **Oráculos da Chainlink** para ajustar o APY das recompensas baseando-se no preço do par ETH/USD, protegendo o valor real dos rendimentos.
+3. **On-chain Reputation (EscrowNFT.sol):** Badges Soulbound (não transferíveis) emitidos automaticamente para freelancers com base no volume de transações concluídas com sucesso.
 
 ---
 
-## 🚀 Como Executar
+## 🛠️ Detalhes da Implementação
 
-### Pré-requisitos
+### 1. Escrow & Pagamentos (`Escrow.sol`)
 
-- Node.js >= 18
-- npm >= 9
-- MetaMask com ETH na Sepolia ([Faucet](https://sepoliafaucet.com))
+- **Segurança:** Proteção contra ataques de Reentrância e Overflow/Underflow (Solidity 0.8+).
+- **Taxas:** Lógica integrada de cobrança de taxas de protocolo (Basis Points) enviadas automaticamente para a carteira de tesouraria.
+- **Estados:** Implementação de máquina de estados robusta para rastrear cada fase do pagamento.
 
-### 1. Instalar dependências
+### 2. Staking Algorítmico (`EscrowStaking.sol`)
 
-```bash
-# Contratos
-cd contracts && npm install
+- **Integração Chainlink:** Consumo do `AggregatorV3Interface` para busca de preços em tempo real.
+- **Fórmula de Recompensa:** Cálculo de rendimentos baseado no tempo decorrido (block.timestamp) e peso do stake, com multiplicador dinâmico via Oráculo.
 
-# Frontend
-cd ../frontend && npm install
+### 3. Governança DAO (`EscrowGovernance.sol`)
 
-# Backend
-cd ../backend && npm install
-```
-
-### 2. Configurar variáveis de ambiente
-
-```bash
-# Contratos — criar arquivo .env
-# contracts/.env
-SEPOLIA_RPC_URL=https://rpc.sepolia.org
-SEPOLIA_PRIVATE_KEY=0xSUA_CHAVE_PRIVADA
-
-# Frontend
-cp frontend/.env.example frontend/.env.local
-# Preencher endereços após o deploy
-```
-
-### 3. Compilar contratos
-
-```bash
-cd contracts
-npx hardhat compile
-```
-
-### 4. Deploy em Sepolia
-
-```bash
-cd contracts
-npx hardhat run scripts/deploy-all.ts --network sepolia
-```
-
-Os endereços serão salvos em `contracts/deployed-addresses.json`. Copie-os para o `frontend/.env.local`.
-
-### 5. Executar script de demonstração
-
-```bash
-cd contracts
-npx hardhat run scripts/demo-interactions.ts --network sepolia
-```
-
-### 6. Iniciar o frontend
-
-```bash
-cd frontend
-npm run dev
-# Acesse http://localhost:3000
-```
+- **Quórum e Propostas:** Sistema de votação por quórum mínimo e maioria simples.
+- **Poder de Voto:** Utiliza o snapshot do saldo do token ESC para definir o peso de influência de cada holder.
 
 ---
 
-## 🎮 Funcionalidades do Frontend
+## 🛠️ Stack Tecnológica
 
-### Staking (`/staking`)
-- Stake/Unstake de tokens ESC
-- APY dinâmico baseado no preço ETH (Chainlink)
-- Claim de recompensas em ESC
-- Visualização do preço ETH em tempo real
-
-### Governança (`/governance`)  
-- Criação de propostas (mínimo 100 ESC)
-- Votação ponderada por saldo de ESC
-- Progresso de quórum em tempo real
-- Lifecycle completo: Ativa → Aprovada/Rejeitada → Executada
+- **Linguagem:** Solidity ^0.8.20.
+- **Framework:** Hardhat.
+- **Bibliotecas:** OpenZeppelin (ERC20, ERC721, Ownable, ReentrancyGuard).
+- **Oráculos:** Chainlink Price Feeds.
+- **Testes:** Viem / Chai para validação de cenários de sucesso e falha.
 
 ---
 
-## 🔐 Segurança
+## 📦 Como Realizar o Deploy
 
-- ✅ `ReentrancyGuard` em todas as funções de transferência
-- ✅ Padrão Checks-Effects-Interactions
-- ✅ `Ownable` para controle de acesso
-- ✅ Solidity ^0.8.x (overflow/underflow protegido nativamente)
-- ✅ OpenZeppelin v5 (auditada e battle-tested)
-- ✅ Integração Chainlink com fallback seguro
+1. **Instale as dependências:**
 
-Ver relatório completo em [`AUDIT_REPORT.md`](./AUDIT_REPORT.md).
+   ```bash
+   npm install
+   ```
 
----
+2. **Configure o arquivo `.env`:**
 
-## 🔮 Integração Chainlink (Etapa 4)
+   ```env
+   SEPOLIA_RPC_URL="https://eth-sepolia.g.alchemy.com/v2/..."
+   PRIVATE_KEY="sua_chave_privada"
+   ```
 
-- **Feed:** ETH/USD na Sepolia (`0x694AA1769357215DE4FAC081bf1f309aDC325306`)
-- **Uso:** `EscrowStaking.sol` consulta o preço do ETH a cada interação de staking
-- **Fórmula do APY:**
-  ```
-  APY_ajustado = 10% × (preço_ETH / $2.000)
-  Cap máximo: 50% ao ano
-  ```
-- **Fallback:** Se o oráculo falhar ou ficar desatualizado (>1h), usa $2.000 como referência
+3. **Compile os contratos:**
 
----
+   ```bash
+   npx hardhat compile
+   ```
 
-## 📊 Diagrama de Fluxo de Staking
-
-```
-Usuário  →  approve(stakingAddr, amount)   →  EscrowToken
-         →  stake(amount)                  →  EscrowStaking
-                                              ├── Consulta ETH/USD (Chainlink)
-                                              ├── Calcula APY dinâmico
-                                              └── Acumula recompensas
-         →  claimRewards()                 →  EscrowStaking
-                                              └── mint(user, rewards)  →  EscrowToken
-```
-
-## 📊 Diagrama de Fluxo de Governança
-
-```
-Holder (≥100 ESC)  →  propose(title, desc)  →  EscrowGovernance
-                                                └── Período: 3 dias
-Qualquer holder    →  vote(id, true/false)   →  EscrowGovernance (ponderado por ESC)
-Qualquer pessoa    →  finalizeProposal(id)   →  EscrowGovernance (após prazo)
-Admin              →  executeProposal(id)    →  Contrato alvo (se aprovada)
-```
+4. **Execute o Script de Deploy:**
+   ```bash
+   npx hardhat run scripts/deploy-all.ts --network sepolia
+   ```
 
 ---
 
-## 📦 Estrutura do Projeto
+## 🛡️ Considerações de Segurança
 
-```
-web3-escrow-complete/
-├── contracts/
-│   ├── contracts/
-│   │   ├── Escrow.sol           # Custódia (existente)
-│   │   ├── EscrowToken.sol      # ERC-20 ESC
-│   │   ├── EscrowNFT.sol        # ERC-721 Badge
-│   │   ├── EscrowStaking.sol    # Staking + Chainlink
-│   │   └── EscrowGovernance.sol # DAO
-│   ├── scripts/
-│   │   ├── deploy-all.ts        # Deploy de todos os contratos
-│   │   └── demo-interactions.ts # Demo: NFT mint, stake, vote
-│   ├── AUDIT_REPORT.md          # Relatório de auditoria
-│   └── deployed-addresses.json  # Endereços após deploy
-├── frontend/
-│   ├── app/
-│   │   ├── staking/page.tsx     # UI de Staking
-│   │   └── governance/page.tsx  # UI de Governança DAO
-│   └── abi/
-│       ├── EscrowToken.json
-│       ├── EscrowNFT.json
-│       ├── EscrowStaking.json
-│       └── EscrowGovernance.json
-└── backend/
-    └── ...
-```
+- **Access Control:** Uso rigoroso de modificadores `onlyOwner` e verificações de endereço.
+- **Pull over Push:** Padrão de saque de recompensas e pagamentos para evitar travamento de contratos por gas limit ou ataques de negação de serviço.
+- **Modularidade:** Contratos independentes para facilitar auditorias e upgrades futuros via proxies (opcional).
 
 ---
 
-## 🧪 Etapas de Entrega (Checklist)
-
-- [x] **Etapa 1** — Modelagem: arquitetura definida, padrões ERC justificados
-- [x] **Etapa 2** — Implementação: ERC-20, ERC-721, Staking, Governança
-- [x] **Etapa 3** — Segurança: ReentrancyGuard, Ownable, Solidity ^0.8, auditoria manual
-- [x] **Etapa 4** — Oráculo: Chainlink ETH/USD integrado no Staking
-- [x] **Etapa 5** — Integração Web3: frontend ethers/wagmi + script de demo
-- [ ] **Etapa 6** — Deploy Sepolia: aguardando execução do `deploy-all.ts`
+**Desenvolvido por: Highlander**
+_Projeto Final - Smart Contracts e Blockchain._
